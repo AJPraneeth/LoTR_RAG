@@ -3,3 +3,4 @@ Dataset
 embeddings.pkl
 metadatas.pkl
 vector_db
+key_word_index
