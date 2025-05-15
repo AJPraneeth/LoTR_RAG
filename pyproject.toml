@@ -1,0 +1,15 @@
+[build-system]                                     
+requires = [
+  "setuptools>=61.0.0",
+  "wheel"
+] 
+
+build-backend = "setuptools.build_meta" 
+
+[project]
+name            = "rag_project"                   
+version         = "0.1.0"                        
+description     = "Retrieval‑Augmented Generation system for LOTR context"
+
+[tool.setuptools.packages.find]
+where   = ["."]
