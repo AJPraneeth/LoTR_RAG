@@ -1,0 +1,18 @@
+# This is a configuration file for a language model, specifically for the LLaMA model.
+streaming: true
+temperature: 0.8
+top_k: 50
+top_p: 0.95
+min_p: 0.05
+n_predict: -1
+n_keep: 0
+tfs_z: 1.0
+typical_p: 1
+repeat_penalty: 1.1
+repeat_last_n: 64
+penalize_nl: true
+presence_penalty: 0.0
+frequency_penalty: 0.0
+mirostat: 1
+mirostat_tau: 5.0
+mirostat_eta: 0.1

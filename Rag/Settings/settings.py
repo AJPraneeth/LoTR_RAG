@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings,SettingsConfigDict
-from pydantic import Field
 
 
 # combine env and configs
@@ -10,6 +9,9 @@ class Settings(BaseSettings):
     FAISS_VECTOR_DB_PATH : str
     RAG_STRATEGY : str
     LLAMA_FILE_SERVER_URL : str
+    DEVICE : str
+    FAISS_CONFIG : str
+    LLAMA_FILE_CONFIG : str
     
     model_config =SettingsConfigDict(
         env_file = ".env",

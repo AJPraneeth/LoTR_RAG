@@ -1,49 +1,46 @@
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-from langchain_community.llms.llamafile import Llamafile
-from langchain.prompts import PromptTemplate,ChatPromptTemplate
-from langchain.chains.retrieval_qa.base import RetrievalQA
-from langchain.chains.retrieval import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-import torch
+from Rag.Settings.settings import Settings
+from Rag.Emberd.hf_emberding import get_huggingface_embeddings
+from Rag.Store.faiss import load_faiss_index
+from Rag.Utils.utils import get_config
+from Rag.Retriever.faiss import get_all_LORT_source_retrierver
+from Rag.LLM.llamafile import connect_llama
+from Rag.Prompt.qa import get_base_prompt
+from Rag.Chain.stuff import create_stuff_chain
 
+class RAGPipeline:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.qa_chain = self._initialize_pipeline()
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    def _initialize_pipeline(self):
+        embedding_model = get_huggingface_embeddings(
+            model_name=self.settings.HF_MODEL,
+            device=self.settings.DEVICE
+        )
+        vectorstore = load_faiss_index(
+            folder_path=self.settings.FAISS_VECTOR_DB_PATH,
+            embeddings=embedding_model,
+            allow_dangerous_deserialization=True
+        )
+        retriever = get_all_LORT_source_retrierver(
+            vectorstore=vectorstore,
+            config=get_config(self.settings.FAISS_CONFIG)
+        )
+        llm = connect_llama(
+            config=get_config(self.settings.LLAMA_FILE_CONFIG),
+            base_url=self.settings.LLAMA_FILE_SERVER_URL
+        )
+        prompt = get_base_prompt()
 
+        if self.settings.RAG_STRATEGY == "stuff":
+            return create_stuff_chain(llm=llm, retriever=retriever, prompt=prompt)
+        else:
+            raise ValueError("Unsupported RAG strategy")
 
-embedding_model=HuggingFaceEmbeddings(model_name='sentence-transformers/all-mpnet-base-v2',
-                                      model_kwargs = {'device': device})
-
-vectorstore = FAISS.load_local(folder_path="vector_db/faiss_index_hybride_all_books",
-                               embeddings=embedding_model,
-                               allow_dangerous_deserialization=True)
-
-
-retriever = vectorstore.as_retriever(search_kwargs={"k": 10}) 
-
-
-llm = Llamafile()
-
-
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a Tolkien scholar assistant."),
-    ("system", "Use the provided LOTR context to answer the question with citations."),
-    ("human", "Context: {context}\n\nQuestion: {query}\nAnswer:")
-])
-
-
-combine_docs_chain = create_stuff_documents_chain(llm, prompt)
-qa_chain = create_retrieval_chain(retriever, combine_docs_chain)
-
-
-query = 'what is Narsil?'
-
-
-response = qa_chain.invoke({"input": query, "query": query})
-
-
-for chunk in qa_chain.stream({"input": query, "query": query}):
-    if "answer" in chunk:
-        print(chunk["answer"], end="", flush=True)
-
-print()
+    def run(self, query: str):
+        return self.qa_chain.invoke({"input": query, "query": query})
+    
+    def stream(self,query:str):
+        for chunk in self.qa_chain.stream({"input": query, "query": query}):
+            if "answer" in chunk:
+                yield chunk["answer"]
